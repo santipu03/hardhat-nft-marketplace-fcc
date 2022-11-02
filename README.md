@@ -4,3 +4,5 @@
     3. `cancelItem`: Cancel a listing
     4. `updateListing`: Update price
     5. `withdrawProceeds`: Withdrae payment for my bought NFTs
+
+The frontend of this project can be found here:
