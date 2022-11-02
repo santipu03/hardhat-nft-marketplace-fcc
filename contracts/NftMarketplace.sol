@@ -102,6 +102,8 @@ contract NftMarketplace {
         emit ItemListed(msg.sender, nftAddress, tokenId, price);
     }
 
+    // consider in a future adding a revert if the buyer is the actual owner
+
     function buyItem(address nftAddress, uint256 tokenId)
         external
         payable
