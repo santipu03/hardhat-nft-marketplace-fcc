@@ -16,7 +16,7 @@ contract NftMarketplace {
         address seller;
     }
 
-    event ItemList(
+    event ItemListed(
         address indexed seller,
         address indexed nftAddress,
         uint256 indexed tokenId,
@@ -89,14 +89,15 @@ contract NftMarketplace {
         uint256 tokenId,
         uint256 price
     ) external notListed(nftAddress, tokenId) isOwner(nftAddress, tokenId, msg.sender) {
-        if (price <= 0) revert NftMarketplace__PriceMustBeAboveZero();
-
+        if (price <= 0) {
+            revert NftMarketplace__PriceMustBeAboveZero();
+        }
         IERC721 nft = IERC721(nftAddress);
         if (nft.getApproved(tokenId) != address(this)) {
             revert NftMarketplace__NotApprovedForMarketplace();
         }
         s_listings[nftAddress][tokenId] = Listing(price, msg.sender);
-        emit ItemList(msg.sender, nftAddress, tokenId, price);
+        emit ItemListed(msg.sender, nftAddress, tokenId, price);
     }
 
     function buyItem(address nftAddress, uint256 tokenId)
@@ -122,6 +123,18 @@ contract NftMarketplace {
     {
         delete (s_listings[nftAddress][tokenId]);
         emit ItemCanceled(msg.sender, nftAddress, tokenId);
+    }
+
+    function updateListing(
+        address nftAddress,
+        uint256 tokenId,
+        uint256 newPrice
+    ) external isOwner(nftAddress, tokenId, msg.sender) isListed(nftAddress, tokenId) {
+        if (newPrice <= 0) {
+            revert NftMarketplace__PriceMustBeAboveZero();
+        }
+        s_listings[nftAddress][tokenId].price = newPrice;
+        emit ItemListed(msg.sender, nftAddress, tokenId, newPrice);
     }
 }
 
