@@ -18,36 +18,34 @@ const { developmentChains } = require("../../helper-hardhat-config")
               playerConnectedNftMarketplace = nftMarketplace.connect(player)
               basicNft = await ethers.getContract("BasicNft", deployer)
               await basicNft.mintNft()
+              await basicNft.approve(nftMarketplace.address, TOKEN_ID)
           })
 
           describe("listItem", () => {
-              it("revert if item is not approved", async () => {
+              it("reverts if item is not approved", async () => {
+                  await basicNft.approve(ethers.constants.AddressZero, TOKEN_ID)
                   await expect(
                       nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
                   ).to.be.revertedWith("NftMarketplace__NotApprovedForMarketplace()")
               })
-              it("revert if item already listed", async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
+              it("reverts if item already listed", async () => {
                   const error = `NftMarketplace__AlreadyListed("${basicNft.address}", ${TOKEN_ID})`
                   await nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
                   await expect(
                       nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
                   ).to.be.revertedWith(error)
               })
-              it("revert if is not the owner", async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
+              it("reverts if is not the owner", async () => {
                   await expect(
                       playerConnectedNftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
                   ).to.be.revertedWith("NftMarketplace__NotOwner")
               })
-              it("revert if price is less or equal than zero", async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
+              it("reverts if price is less or equal than zero", async () => {
                   await expect(
                       nftMarketplace.listItem(basicNft.address, TOKEN_ID, 0)
                   ).to.be.revertedWith("NftMarketplace__PriceMustBeAboveZero")
               })
               it("updates mapping and emits an event", async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
                   await expect(nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)).to.emit(
                       nftMarketplace,
                       "ItemListed"
@@ -59,11 +57,8 @@ const { developmentChains } = require("../../helper-hardhat-config")
           })
 
           describe("cancelListing", () => {
-              beforeEach(async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
-              })
               //it("revert if is not the owner", async () => {})
-              it("revert if item is not listed", async () => {
+              it("reverts if item is not listed", async () => {
                   const error = `NftMarketplace__NotListed("${basicNft.address}", ${TOKEN_ID})`
                   await expect(
                       nftMarketplace.cancelListing(basicNft.address, TOKEN_ID)
@@ -86,11 +81,9 @@ const { developmentChains } = require("../../helper-hardhat-config")
 
           describe("buyItem", () => {
               beforeEach(async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
                   await nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
               })
-              //it("revert if item is not listed", async () => {})
-              it("revert if msg.value is less than the item's price", async () => {
+              it("reverts if the price isn't met", async () => {
                   const listedItem = await nftMarketplace.getListing(basicNft.address, TOKEN_ID)
                   const error = `NftMarketplace__PriceNotMet("${basicNft.address}", ${TOKEN_ID}, ${listedItem.price})`
                   await expect(
@@ -128,10 +121,9 @@ const { developmentChains } = require("../../helper-hardhat-config")
 
           describe("updateListing", () => {
               beforeEach(async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
                   await nftMarketplace.listItem(basicNft.address, TOKEN_ID, PRICE)
               })
-              it("revert if the new price is equal or less than zero", async () => {
+              it("reverts if the new price is equal or less than zero", async () => {
                   await expect(
                       nftMarketplace.updateListing(basicNft.address, TOKEN_ID, 0)
                   ).to.be.revertedWith("NftMarketplace__PriceMustBeAboveZero")
@@ -146,9 +138,6 @@ const { developmentChains } = require("../../helper-hardhat-config")
               })
           })
           describe("withdrawProceeds", () => {
-              beforeEach(async () => {
-                  await basicNft.approve(nftMarketplace.address, TOKEN_ID)
-              })
               it("reverts if proceeds are equal or less than zero", async () => {
                   await expect(nftMarketplace.withdrawProceeds()).to.be.revertedWith(
                       "NftMarketplace__NoProceeds"
@@ -172,13 +161,11 @@ const { developmentChains } = require("../../helper-hardhat-config")
                   const tx = await nftMarketplace.withdrawProceeds()
                   const txResponse = await tx.wait(1)
                   const { gasUsed, effectiveGasPrice } = txResponse
+                  const gasCost = gasUsed.mul(effectiveGasPrice)
                   const deployerEndingBalance = await accounts[0].getBalance()
                   assert.equal(
                       deployerEndingBalance.toString(),
-                      deployerStartingBalance
-                          .sub(gasUsed.mul(effectiveGasPrice))
-                          .add(PRICE)
-                          .toString()
+                      deployerStartingBalance.sub(gasCost).add(PRICE).toString()
                   )
               })
           })
